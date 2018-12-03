@@ -24,6 +24,9 @@ const GET_ISSUES_OF_REPOSITORY = `
         id
         name
         url
+        stargazers {
+          totalCount
+        }
         viewerHasStarred
         issues(first: 5, after: $endCursor, states: [OPEN]) {
           edges {
@@ -138,6 +141,9 @@ const resolveStarMutation = mutationResults => oldState => {
       ...oldState.organization,
       repository: {
         ...oldState.organization.repository,
+        stargazers: {
+          totalCount: oldState.organization.repository.stargazers.totalCount + 1
+        },
         viewerHasStarred: viewerHasStarred
       }
     }
@@ -160,6 +166,20 @@ const removeStarFromRepo = repoId => axiosGitHubGraphQL.post('', {
   variables: { repoId }
 });
 
+const ADD_REACTION = `
+  mutation($subjectId: ID!, $content: ReactionContent!) {
+    addReaction(input: {subjectId: $subjectId, content: $content}) {
+      reaction {
+        id
+        content
+        reactable {
+          viewerCanReact
+        }
+      }
+    }
+  }
+`;
+
 const resolveUnstarMutation = mutationResults => oldState => {
 
   const { data, errors } = mutationResults.data;
@@ -181,6 +201,9 @@ const resolveUnstarMutation = mutationResults => oldState => {
       ...oldState.organization,
       repository: {
         ...oldState.organization.repository,
+        stargazers: {
+          totalCount: oldState.organization.repository.stargazers.totalCount - 1
+        },
         viewerHasStarred: viewerHasStarred
       }
     }
@@ -263,6 +286,10 @@ class App extends Component {
 
   }
 
+  onReactionButtonClick = (subjectId, content) => {
+    console.error('[App] - onReactionButtonClick() - NOT IMPLEMENTED', subjectId, content);
+  }
+
   render() {
 
     const { path, organization, errors } = this.state;
@@ -290,6 +317,7 @@ class App extends Component {
             errors={errors}
             onFetchMoreIssues={this.onFetchMoreIssues}
             onStarRepository={this.onStarRepository}
+            onReactionButtonClick={this.onReactionButtonClick}
           />
         ) : (
             <p>No information yet...</p>

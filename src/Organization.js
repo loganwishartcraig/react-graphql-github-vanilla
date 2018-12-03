@@ -5,7 +5,8 @@ const Organization = ({
     organization,
     errors,
     onFetchMoreIssues,
-    onStarRepository
+    onStarRepository,
+    onReactionButtonClick
 }) => {
 
     if (errors) {
@@ -30,6 +31,7 @@ const Organization = ({
                     repository={organization.repository}
                     onFetchMoreIssues={onFetchMoreIssues}
                     onStarRepository={onStarRepository}
+                    onReactionButtonClick={onReactionButtonClick}
                 />
             </div>
         )

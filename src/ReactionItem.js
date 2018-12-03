@@ -1,9 +1,9 @@
 import React from 'react';
 
-const ReactionItem = ({ reaction }) => (
+const ReactionItem = ({ reaction: { content } }) => (
 
     <li>
-        {reaction.content}
+        {content}
     </li>
 
 );
