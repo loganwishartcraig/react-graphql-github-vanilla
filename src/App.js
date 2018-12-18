@@ -173,12 +173,79 @@ const ADD_REACTION = `
         id
         content
         reactable {
+          id
           viewerCanReact
         }
       }
     }
   }
 `;
+
+const addReactionToIssue = (subjectId, content) => axiosGitHubGraphQL.post('', {
+  query: ADD_REACTION,
+  variables: { subjectId, content }
+});
+
+const resolveAddReactionMutation = mutationResults => oldState => {
+
+  const { data, errors } = mutationResults.data;
+
+  if (errors) {
+    return {
+      ...oldState,
+      errors: errors
+    };
+  }
+
+  const { reaction } = data.addReaction;
+  const { id: issueId } = reaction.reactable;
+  const { edges: oldIssues } = oldState.organization.repository.issues;
+
+  const newIssues = oldIssues.map(edge => {
+
+    const { node } = edge;
+
+    if (node.id === issueId) {
+
+      const { reactions } = node;
+
+      const newReactions = [
+        { node: reaction },
+        ...reactions.edges.filter(({ node }) => node.id !== reaction.id).slice(0, 2)
+      ];
+
+      return {
+        ...edge,
+        node: {
+          ...node,
+          reactions: {
+            ...reactions,
+            edges: newReactions
+          }
+        }
+      };
+
+    } else {
+      return { ...edge };
+    }
+
+  });
+
+  return {
+    ...oldState,
+    organization: {
+      ...oldState.organization,
+      repository: {
+        ...oldState.organization.repository,
+        issues: {
+          ...oldState.organization.repository.issues,
+          edges: newIssues
+        }
+      }
+    }
+  };
+
+};
 
 const resolveUnstarMutation = mutationResults => oldState => {
 
@@ -260,8 +327,6 @@ class App extends Component {
 
   onStarRepository = (repoId, viewerHasStarred) => {
 
-    console.log('onStarRepository', repoId, viewerHasStarred)
-
     if (!viewerHasStarred) {
 
       addStarToRepo(repoId)
@@ -287,7 +352,16 @@ class App extends Component {
   }
 
   onReactionButtonClick = (subjectId, content) => {
-    console.error('[App] - onReactionButtonClick() - NOT IMPLEMENTED', subjectId, content);
+
+    addReactionToIssue(subjectId, content)
+      .then(mutationResults => {
+        this.setState(resolveAddReactionMutation(mutationResults));
+      })
+      .catch(err => {
+        this.setState({ errors: [{ message: 'Failed to add reaction' }] });
+      });
+
+    // console.error('[App] - onReactionButtonClick() - NOT IMPLEMENTED', subjectId, content);
   }
 
   render() {
